@@ -1,0 +1,20 @@
+{
+	"name": "InsertDimEmployee",
+	"properties": {
+		"folder": {
+			"name": "pl_sql_zed_scripts"
+		},
+		"content": {
+			"query": "COPY INTO [dbo].[DimEmployee]\nFROM 'https://solliancepublicdata.blob.core.windows.net/dataengineering/dp-203/awdata/DimEmployee.csv'\nWITH (\n    FILE_TYPE='CSV',\n    FIELDTERMINATOR='|',\n    FIELDQUOTE='',\n    ROWTERMINATOR='\\n',\n    ENCODING = 'UTF16'\n);\nGO\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "pl_sql_zed",
+				"poolName": "pl_sql_zed"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
