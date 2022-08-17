@@ -1,0 +1,154 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "wk-curso-zed"
+		},
+		"wk-curso-zed-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'wk-curso-zed-WorkspaceDefaultSqlServer'"
+		},
+		"wk-curso-zed-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://sacursozed.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/wk-curso-zed-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('wk-curso-zed-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/wk-curso-zed-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('wk-curso-zed-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CreateDimEmployee')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "pl_sql_zed_scripts"
+				},
+				"content": {
+					"query": "CREATE TABLE [dbo].[DimEmployee](\n[EmployeeKey] [int] NOT NULL,\n[ParentEmployeeKey] [int] NULL,\n[EmployeeNationalIDAlternateKey] [nvarchar](15) NULL,\n[ParentEmployeeNationalIDAlternateKey] [nvarchar](15) NULL,\n[SalesTerritoryKey] [int] NULL,\n[FirstName] [nvarchar](50) NOT NULL,\n[LastName] [nvarchar](50) NOT NULL,\n[MiddleName] [nvarchar](50) NULL,\n[NameStyle] [bit] NOT NULL,\n[Title] [nvarchar](50) NULL,\n[HireDate] [date] NULL,\n[BirthDate] [date] NULL,\n[LoginID] [nvarchar](256) NULL,\n[EmailAddress] [nvarchar](50) NULL,\n[Phone] [nvarchar](25) NULL,\n[MaritalStatus] [nchar](1) NULL,\n[EmergencyContactName] [nvarchar](50) NULL,\n[EmergencyContactPhone] [nvarchar](25) NULL,\n[SalariedFlag] [bit] NULL,\n[Gender] [nchar](1) NULL,\n[PayFrequency] [tinyint] NULL,\n[BaseRate] [money] NULL,\n[VacationHours] [smallint] NULL,\n[SickLeaveHours] [smallint] NULL,\n[CurrentFlag] [bit] NOT NULL,\n[SalesPersonFlag] [bit] NOT NULL,\n[DepartmentName] [nvarchar](50) NULL,\n[StartDate] [date] NULL,\n[EndDate] [date] NULL,\n[Status] [nvarchar](50) NULL,\n[EmployeePhoto] [varbinary](max) NULL\n)\nWITH\n(\nDISTRIBUTION = REPLICATE,\nCLUSTERED INDEX (EmployeeKey)\n);\nGO\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "pl_sql_zed",
+						"poolName": "pl_sql_zed"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/InsertDimEmployee')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "pl_sql_zed_scripts"
+				},
+				"content": {
+					"query": "COPY INTO [dbo].[DimEmployee]\nFROM 'https://solliancepublicdata.blob.core.windows.net/dataengineering/dp-203/awdata/DimEmployee.csv'\nWITH (\n    FILE_TYPE='CSV',\n    FIELDTERMINATOR='|',\n    FIELDQUOTE='',\n    ROWTERMINATOR='\\n',\n    ENCODING = 'UTF16'\n);\nGO\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "pl_sql_zed",
+						"poolName": "pl_sql_zed"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/pl_sql_zed')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "eastus"
+		}
+	]
+}
